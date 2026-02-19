@@ -155,9 +155,8 @@ local function reset_vim(state)
 end
 
 local function run_tests()
-  local state = {}
   local template_path = "/config/templates/lua.template"
-  local get_lines = reset_vim({
+  local state = {
     filetype = "lua",
     files = {
       [template_path] = {
@@ -171,7 +170,8 @@ local function run_tests()
     current_file = "src/main.lua",
     current_filename = "main.lua",
     env = { USER = "dev" },
-  })
+  }
+  local get_lines = reset_vim(state)
 
   package.loaded["preamble"] = nil
   local preamble = require("preamble")
@@ -193,33 +193,32 @@ local function run_tests()
   local second_insert = preamble.insert()
   assert_false(second_insert, "second insert should not run on non-empty buffer")
 
-  local state2 = {}
-  local get_lines2 = reset_vim({
+  local state2 = {
     filetype = "lua",
     files = { [template_path] = { "-- Hello", "body" } },
     buffer_lines = { "-- File: existing.lua" },
     env = { USER = "dev" },
-  })
+  }
+  local get_lines2 = reset_vim(state2)
   package.loaded["preamble"] = nil
   preamble = require("preamble")
   preamble.setup({ enabled = true })
   assert_false(preamble.insert({ force = true }), "force insert still blocked when marker exists")
   assert_eq(get_lines2()[1], "-- File: existing.lua")
 
-  local state3 = {}
-  reset_vim({
+  local state3 = {
     filetype = "python",
     files = {},
     buffer_lines = { "" },
     env = { USER = "dev" },
-  })
+  }
+  reset_vim(state3)
   package.loaded["preamble"] = nil
   preamble = require("preamble")
   preamble.setup({ enabled = true })
   assert_eq(preamble.render(), nil, "render should return nil without template")
 
-  local state4 = {}
-  local get_lines4 = reset_vim({
+  local state4 = {
     filetype = "lua",
     files = {
       [template_path] = {
@@ -229,7 +228,8 @@ local function run_tests()
     },
     buffer_lines = { "" },
     env = { USER = "fallback-user" },
-  })
+  }
+  local get_lines4 = reset_vim(state4)
   _G.vim.g.header_author = "Global Author"
   _G.vim.g.header_email = "global@example.com"
   package.loaded["preamble"] = nil
