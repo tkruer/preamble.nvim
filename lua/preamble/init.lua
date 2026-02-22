@@ -1,5 +1,23 @@
+---@class PreambleFiletypeOptions
+---@field allowlist? string[]
+---@field denylist? string[]
+
+---@class PreambleOptions
+---@field templates_dir string
+---@field author? string
+---@field email? string
+---@field enabled boolean
+---@field filetypes PreambleFiletypeOptions
+---@field header_scan_lines integer
+
+---@class PreambleRenderResult
+---@field lines string[]
+---@field cursor integer[]|nil
+---@field template_path string
+
 local M = {}
 
+---@type PreambleOptions
 local defaults = {
   templates_dir = vim.fn.stdpath("config") .. "/templates/",
   author = nil,
@@ -12,12 +30,17 @@ local defaults = {
   header_scan_lines = 20,
 }
 
+---@type PreambleOptions
 M._opts = vim.deepcopy(defaults)
 
+---@param value any
+---@return boolean
 local function is_empty(value)
   return value == nil or value == ""
 end
 
+---@param path string|nil
+---@return string
 local function normalize_templates_dir(path)
   if is_empty(path) then
     return defaults.templates_dir
@@ -30,16 +53,22 @@ local function normalize_templates_dir(path)
   return path
 end
 
+---@param opts PreambleOptions|nil
+---@return PreambleOptions
 local function merge_opts(opts)
   local merged = vim.tbl_deep_extend("force", vim.deepcopy(defaults), opts or {})
   merged.templates_dir = normalize_templates_dir(merged.templates_dir)
   return merged
 end
 
+---@param msg string
+---@param level integer|nil
 local function notify(msg, level)
   pcall(vim.notify, msg, level or vim.log.levels.INFO, { title = "preamble" })
 end
 
+---@param bufnr integer
+---@return boolean
 local function is_buffer_empty(bufnr)
   local ok_count, line_count = pcall(vim.api.nvim_buf_line_count, bufnr)
   if not ok_count then
@@ -62,6 +91,8 @@ local function is_buffer_empty(bufnr)
   return false
 end
 
+---@param ft string
+---@return boolean
 local function allowed_filetype(ft)
   local allowlist = M._opts.filetypes.allowlist
   local denylist = M._opts.filetypes.denylist
@@ -91,6 +122,7 @@ local function allowed_filetype(ft)
   return true
 end
 
+---@return string
 local function resolve_author()
   return M._opts.author
     or vim.g.header_author
@@ -99,6 +131,7 @@ local function resolve_author()
     or "Unknown"
 end
 
+---@return string
 local function resolve_email()
   return M._opts.email
     or vim.g.header_email
@@ -107,15 +140,21 @@ local function resolve_email()
     or ""
 end
 
+---@param ft string
+---@return string
 local function template_path_for_filetype(ft)
   return M._opts.templates_dir .. ft .. ".template"
 end
 
+---@param path string
+---@return boolean
 local function template_exists(path)
   local ok_stat, stat = pcall(vim.uv.fs_stat, path)
   return ok_stat and stat and stat.type == "file"
 end
 
+---@param path string
+---@return string[]|nil
 local function read_template(path)
   local ok_read, lines = pcall(vim.fn.readfile, path)
   if not ok_read then
@@ -125,6 +164,8 @@ local function read_template(path)
   return lines
 end
 
+---@param bufnr integer
+---@return boolean
 local function has_header_marker(bufnr)
   local scan_count = M._opts.header_scan_lines or defaults.header_scan_lines
   local line_count = vim.api.nvim_buf_line_count(bufnr)
@@ -140,6 +181,9 @@ local function has_header_marker(bufnr)
   return false
 end
 
+---@param lines string[]
+---@param bufnr integer
+---@return string[], integer[]
 local function render_lines(lines, bufnr)
   local now = os.date("*t")
   local replacements = {
@@ -198,6 +242,7 @@ local function render_lines(lines, bufnr)
   return rendered, { 1, 0 }
 end
 
+---@return PreambleRenderResult|nil
 function M.render()
   local ft = vim.bo.filetype
   if is_empty(ft) or not allowed_filetype(ft) then
@@ -222,6 +267,8 @@ function M.render()
   }
 end
 
+---@param opts? { force?: boolean }
+---@return boolean
 function M.insert(opts)
   opts = opts or {}
   local bufnr = vim.api.nvim_get_current_buf()
@@ -292,6 +339,7 @@ local function setup_autocmd()
   })
 end
 
+---@param opts? PreambleOptions
 function M.setup(opts)
   M._opts = merge_opts(opts)
   setup_autocmd()
