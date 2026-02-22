@@ -5,16 +5,38 @@ on:
   pull_request:
 
 jobs:
-  test:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Lua
+      - name: Setup Lua
+        uses: leafo/gh-actions-lua@v11
+        with:
+          luaVersion: "5.4"
+
+      - name: Setup LuaRocks
+        uses: leafo/gh-actions-luarocks@v4
+
+      - name: Install tooling
         run: |
-          sudo apt-get update
-          sudo apt-get install -y lua5.4
+          luarocks install luacheck
+
+      - name: Setup StyLua
+        uses: JohnnyMorganz/stylua-action@v4
+        with:
+          version: latest
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup just
+        uses: taiki-e/install-action@just
+
+      - name: Check formatting
+        run: just format-check
+
+      - name: Lint
+        run: just lint
 
       - name: Run unit tests
-        run: lua tests/test_preamble.lua
+        run: just test

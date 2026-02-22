@@ -136,13 +136,21 @@ require("preamble").render()
 
 ## Development
 
-Run unit tests locally:
+Recommended tooling:
+
+- [StyLua](https://github.com/JohnnyMorganz/StyLua) for formatting
+- [Luacheck](https://github.com/mpeterv/luacheck) for linting
+
+Convenience targets are included in the `justfile`:
 
 ```bash
-lua tests/test_preamble.lua
+just format       # format lua/plugin/tests with stylua
+just format-check # verify formatting
+just lint         # run luacheck
+just test         # run unit tests
 ```
 
-A GitHub Actions workflow is included at `.github/workflows/ci.yml` and runs this test suite on push and pull requests.
+CI (`.github/workflows/ci.yml`) runs format checks, linting, and tests on push and pull requests.
 
 ## Duplicate preamble guard
 
